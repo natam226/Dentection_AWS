@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  dentection-app:
+    image: nataliam123/dentection:latest
+    container_name: dentection-app
+    ports:
+      - "8501:8501"
+    environment:
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=5432
+      - DB_NAME=dentection
+      - DB_USER=dentuser
+      - DB_PASSWORD=dentpass
+    restart: unless-stopped
+    networks:
+      - dentection-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: dentection-db
+    profiles: ["with-db"]  # ← solo arranca si se le indica
+    environment:
+      - POSTGRES_DB=dentection
+      - POSTGRES_USER=dentuser
+      - POSTGRES_PASSWORD=dentpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dentuser -d dentection"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - dentection-net
+
+volumes:
+  postgres_data:
+
+networks:
+  dentection-net:
+    driver: bridge

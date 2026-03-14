@@ -1,3 +1,73 @@
+import psycopg2
+import os
+from datetime import datetime
+
+def get_db_connection():
+    """Conexión a PostgreSQL con variables de entorno"""
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            port=os.getenv("DB_PORT", "5432"),
+            database=os.getenv("DB_NAME", "dentection"),
+            user=os.getenv("DB_USER", "dentuser"),
+            password=os.getenv("DB_PASSWORD", "dentpass")
+        )
+        return conn
+    except Exception as e:
+        return None
+
+def init_db():
+    """Crear tabla si no existe"""
+    conn = get_db_connection()
+    if conn:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS analisis (
+                id SERIAL PRIMARY KEY,
+                fecha TIMESTAMP DEFAULT NOW(),
+                nombre_imagen VARCHAR(255),
+                anomalias_detectadas TEXT,
+                cantidad_detecciones INTEGER,
+                instancia_id VARCHAR(50)
+            )
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+
+def guardar_analisis(nombre_imagen, anomalias, cantidad):
+    """Guardar resultado de análisis en BD"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            # Identificar qué instancia procesó la solicitud
+            import urllib.request
+            try:
+                instancia = urllib.request.urlopen(
+                    'http://169.254.169.254/latest/meta-data/instance-id',
+                    timeout=1
+                ).read().decode()
+            except:
+                instancia = "local"
+            
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO analisis 
+                    (nombre_imagen, anomalias_detectadas, cantidad_detecciones, instancia_id)
+                VALUES (%s, %s, %s, %s)
+            """, (nombre_imagen, str(anomalias), cantidad, instancia))
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            pass
+
+# Inicializar BD al arrancar
+init_db()
+
+
+# =========================================================
+
 import streamlit as st
 import cv2
 import torch
