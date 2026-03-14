@@ -162,7 +162,7 @@ if uploaded_files:
         df_detections["Etiqueta"].tolist() if not df_detections.empty else [],
         len(df_detections)
     )
-    
+
     if not df_detections.empty:
         # Formato visual para la tabla (% de confianza)
         df_display = df_detections.copy()
