@@ -1,0 +1,7 @@
+ultralytics
+streamlit
+torch
+opencv-python-headless
+streamlit-option-menu
+fpdf
+pandas
