@@ -35,21 +35,28 @@ def init_db():
         cur.close()
         conn.close()
 
+def get_instance_id():
+    try:
+        token = urllib.request.urlopen(
+            urllib.request.Request(
+                'http://169.254.169.254/latest/api/token',
+                headers={'X-aws-ec2-metadata-token-ttl-seconds': '21600'},
+                method='PUT'
+            ), timeout=1
+        ).read().decode()
+        req = urllib.request.Request(
+            'http://169.254.169.254/latest/meta-data/instance-id',
+            headers={'X-aws-ec2-metadata-token': token}
+        )
+        return urllib.request.urlopen(req, timeout=1).read().decode()
+    except:
+        return "local"
+
 def guardar_analisis(nombre_imagen, anomalias, cantidad):
-    """Guardar resultado de análisis en BD"""
     conn = get_db_connection()
     if conn:
         try:
-            # Identificar qué instancia procesó la solicitud
-            import urllib.request
-            try:
-                instancia = urllib.request.urlopen(
-                    'http://169.254.169.254/latest/meta-data/instance-id',
-                    timeout=1
-                ).read().decode()
-            except:
-                instancia = "local"
-            
+            instancia = get_instance_id()  # ← aquí
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO analisis 
