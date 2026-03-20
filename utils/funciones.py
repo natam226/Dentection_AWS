@@ -1,4 +1,5 @@
 import base64
+from matplotlib import scale
 import numpy as np
 import cv2
 import streamlit as st
@@ -104,8 +105,8 @@ def draw_custom_boxes(image, boxes, class_list, selected_index=None):
 
     # Escala dinámica según el tamaño de la imagen
     scale = min(w_img, h_img) / 1000.0
-    font_scale_base = max(0.35, min(0.6, scale))
-    thickness_base  = max(1, int(2 * scale))
+    font_scale_base = max(0.25, min(0.4, scale * 0.6))
+    thickness_base  = max(1, int(1.5 * scale))
 
     COLOR_DEFAULT   = (255, 0, 0)
     COLOR_HIGHLIGHT = (0, 255, 0)
@@ -115,7 +116,7 @@ def draw_custom_boxes(image, boxes, class_list, selected_index=None):
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         conf    = float(box.conf[0])
         cls_id  = int(box.cls[0])
-        label   = f"{class_list[cls_id]} {conf:.0%}"
+        label = f"{class_list[cls_id].replace('_', ' ')} {conf:.0%}"
 
         if selected_index is not None:
             if i == selected_index:
