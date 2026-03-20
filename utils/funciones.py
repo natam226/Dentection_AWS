@@ -97,40 +97,74 @@ def show_zoomable_image(img_rgb):
 def draw_custom_boxes(image, boxes, class_list, selected_index=None):
     """
     Dibuja las cajas sobre la imagen manualmente.
+    Escala automáticamente según el tamaño de la imagen.
     """
     img_draw = image.copy()
-    
-    COLOR_DEFAULT = (255, 0, 0)    # Azul
-    COLOR_HIGHLIGHT = (0, 255, 0)  # Verde brillante
-    COLOR_DIMMED = (200, 200, 200) # Gris claro
-    
+    h_img, w_img = img_draw.shape[:2]
+
+    # Escala dinámica según el tamaño de la imagen
+    scale = min(w_img, h_img) / 1000.0
+    font_scale_base = max(0.35, min(0.6, scale))
+    thickness_base  = max(1, int(2 * scale))
+
+    COLOR_DEFAULT   = (255, 0, 0)
+    COLOR_HIGHLIGHT = (0, 255, 0)
+    COLOR_DIMMED    = (180, 180, 180)
+
     for i, box in enumerate(boxes):
         x1, y1, x2, y2 = map(int, box.xyxy[0])
-        conf = float(box.conf[0])
-        cls_id = int(box.cls[0])
-        label = f"{class_list[cls_id]} {conf:.2f}"
+        conf    = float(box.conf[0])
+        cls_id  = int(box.cls[0])
+        label   = f"{class_list[cls_id]} {conf:.0%}"
 
         if selected_index is not None:
             if i == selected_index:
-                color = COLOR_HIGHLIGHT
-                thickness = 5
-                font_scale = 1.2
+                color      = COLOR_HIGHLIGHT
+                thickness  = thickness_base + 1
+                font_scale = font_scale_base
             else:
-                color = COLOR_DIMMED
-                thickness = 2
-                font_scale = 1
+                color      = COLOR_DIMMED
+                thickness  = max(1, thickness_base - 1)
+                font_scale = font_scale_base * 0.85
         else:
-            color = COLOR_DEFAULT
-            thickness = 5
-            font_scale = 1.2
+            color      = COLOR_DEFAULT
+            thickness  = thickness_base
+            font_scale = font_scale_base
 
+        # Dibujar rectángulo
         cv2.rectangle(img_draw, (x1, y1), (x2, y2), color, thickness)
-        text_thickness = max(1, int(font_scale * 2))         # controla grosor del texto
-        outline_thickness = text_thickness + 1               # contorno más grueso
-        (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_thickness)
-        cv2.rectangle(img_draw, (x1, y1 - 20), (x1 + w, y1), color, -1)
-        cv2.putText(img_draw, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), outline_thickness, lineType=cv2.LINE_AA)
-        cv2.putText(img_draw, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), text_thickness, lineType=cv2.LINE_AA)
+
+        # Calcular tamaño del texto para el fondo del label
+        text_thickness = max(1, int(font_scale * 1.5))
+        (tw, th), baseline = cv2.getTextSize(
+            label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_thickness
+        )
+
+        # Padding dinámico alrededor del texto
+        pad = max(3, int(th * 0.4))
+        label_h = th + pad * 2
+
+        # Fondo del label (arriba del box si cabe, abajo si no)
+        if y1 - label_h - baseline >= 0:
+            bg_y1 = y1 - label_h - baseline
+            bg_y2 = y1
+            txt_y = y1 - baseline - pad
+        else:
+            bg_y1 = y2
+            bg_y2 = y2 + label_h + baseline
+            txt_y = y2 + th + pad
+
+        cv2.rectangle(img_draw, (x1, bg_y1), (x1 + tw + pad * 2, bg_y2), color, -1)
+
+        # Texto con contorno para legibilidad
+        cv2.putText(img_draw, label,
+                    (x1 + pad, txt_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale,
+                    (0, 0, 0), text_thickness + 1, cv2.LINE_AA)
+        cv2.putText(img_draw, label,
+                    (x1 + pad, txt_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale,
+                    (255, 255, 255), text_thickness, cv2.LINE_AA)
 
     return img_draw
 
